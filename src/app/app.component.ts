@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, ViewChild } from '@angular/core';
 
 @Component({
   selector: 'app-root',
@@ -32,14 +32,6 @@ export class AppComponent {
     this.visibleTiles = this.tiles.filter(tile => tile.x >= this.visibleMapX && tile.x < this.visibleMapX + this.visibleMapSize && tile.y >= this.visibleMapY && tile.y < this.visibleMapY + this.visibleMapSize);
   }
 
-  move(x: number, y: number) {
-    this.moveMap(x, y);
-    this.filterTiles();
-  }
-  maxMove(x: number, y: number) {
-    this.moveMap(x * this.visibleMapSize, y * this.visibleMapSize);
-    this.filterTiles();
-  }
 
   selectedTiles = []
 
@@ -47,17 +39,55 @@ export class AppComponent {
     console.log(x);
   }
 
+  public move(x: number, y: number) {
+    this.moveMap(x, y);
+    this.filterTiles();
+  }
+  public fullMove(x: number, y: number) {
+    this.moveMap(x * this.visibleMapSize, y * this.visibleMapSize);
+    this.filterTiles();
+  }
+  public maxMove(x: number, y: number) {
+    this.moveMap(Number.MAX_SAFE_INTEGER * x, y * Number.MAX_SAFE_INTEGER);
+    this.filterTiles();
+  }
   private moveMap(x: number, y: number) {
     this.visibleMapX += x;
     this.visibleMapY += y;
     if (this.visibleMapX < 0) this.visibleMapX = 0;
-    else if (this.visibleMapX >= this.totalMapSizeX) this.visibleMapX = this.totalMapSizeX - this.visibleMapSize;
+    else if (this.visibleMapX + this.visibleMapSize >= this.totalMapSizeX) this.visibleMapX = this.totalMapSizeX - this.visibleMapSize;
     if (this.visibleMapY < 0) this.visibleMapY = 0;
-    else if (this.visibleMapY >= this.totalMapSizeY) this.visibleMapY = this.totalMapSizeY - this.visibleMapSize;
+    else if (this.visibleMapY + this.visibleMapSize >= this.totalMapSizeY) this.visibleMapY = this.totalMapSizeY - this.visibleMapSize;
+    this.drawPositionRect()
+  }
+
+  @ViewChild('canvas', { static: true })
+  canvas!: ElementRef<HTMLCanvasElement>;
+
+  private ctx!: CanvasRenderingContext2D;
+  ngOnInit(): void {
+    this.ctx = this.canvas.nativeElement.getContext('2d')!;
+  }
+  drawPositionRect() {
+    this.ctx.clearRect(0, 0, 100, 100)
+    this.ctx.fillRect(this.visibleMapX, this.visibleMapY, 10, 10);
+  }
+
+  canvasX = 100;
+  canvasY = 100;
+  changeCanvasSize() {
+    this.canvasX = 300;
+    this.canvasY = 300;
   }
 }
 interface Tile {
   x: number;
   y: number;
   type: number;
+}
+
+interface TileOption {
+  value: any;
+  name: string
+  color: string;
 }

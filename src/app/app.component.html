@@ -1,45 +1,82 @@
 <div class="grid grid-cols-5 h-screen">
   <div class="col-span-4 grid grid-cols-6 grid-rows-6">
     <div class="row-start-1 col-start-2 col-span-4 grid place-content-center">
-      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10 mb-3"
-        (click)="maxMove(0,-1)">⇈</button>
-      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10"
-        (click)="move(0,-1)">↑</button>
+      <div class="flex gap-3">
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10 mb-3"
+          (click)="fullMove(0,-1)">⇈</button>
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10"
+          (click)="move(0,-1)">↑</button>
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10 mb-3"
+          (click)="maxMove(0,-1)">⭱</button>
+      </div>
     </div>
     <div class="row-start-6 col-start-2 col-span-4 grid place-content-center">
-      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10 mb-3"
-        (click)="move(0,1)">↓</button>
-      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10"
-        (click)="maxMove(0,1)">⇊</button>
+      <div class="flex gap-3">
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10"
+          (click)="fullMove(0,1)">⇊</button>
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10 mb-3"
+          (click)="move(0,1)">↓</button>
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10"
+          (click)="maxMove(0,1)">⭳</button>
+      </div>
     </div>
     <div class="row-start-2 col-start-1 row-span-4 grid place-content-center">
-      <div>
+      <div class="flex flex-col gap-3">
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-10 shadow-lg h-20 mr-3"
-          (click)="maxMove(-1,0)">⇇</button>
+          (click)="fullMove(-1,0)">⇇</button>
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-10 shadow-lg h-20"
           (click)="move(-1,0)">←</button>
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-10 shadow-lg h-20 mr-3"
+          (click)="maxMove(-1,0)">⭰</button>
       </div>
     </div>
     <div class="row-start-2 col-start-6 row-span-4 grid place-content-center">
-      <div>
+      <div class="flex flex-col gap-3">
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-10 shadow-lg h-20"
+          (click)="fullMove(1,0)">⇉</button>
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-10 shadow-lg h-20 mr-3"
           (click)="move(1,0)">→</button>
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-10 shadow-lg h-20"
-          (click)="maxMove(1,0)">⇉</button>
+          (click)="maxMove(1,0)">⭲</button>
       </div>
     </div>
-    <div class="row-start-2 col-start-2 row-span-4 col-span-4 grid gap-3 grid-cols-10">
-      <div *ngFor="let tile of visibleTiles" class="border rounded border-blue-400 shadow-lg grid place-content-center">
-        <span>{{tile.x}}, {{tile.y}}</span>
+    <dts-select-container class="row-start-2 col-start-2 row-span-4 col-span-4 !grid gap-3 grid-cols-10"
+      [(selectedItems)]="selectedTiles" (select)="log($event)">
+      <div *ngFor="let tile of visibleTiles" [dtsSelectItem]="tile"
+        class="rounded border-2 border-dashed grid place-content-center">
+        <span class="select-none font-mono">{{tile.x | number: '2.0'}},{{tile.y | number: '2.0'}}</span>
       </div>
-      <!-- <dts-select-container #container="dts-select-container" [(selectedItems)]="selectedTiles" (select)="log($event)">
-        <div [dtsSelectItem]="tile" *ngFor="let tile of tiles" class="w-96 h-96 border rounded border-gray-500">
-          {{tile}}
-        </div>
-      </dts-select-container> -->
-    </div>
+    </dts-select-container>
   </div>
-  <div class="col-span-1">
-    dashboard
+  <div class="col-span-1 flex flex-col p-2 bg-gray-200 rounded-tl-xl border-l-8 border-t-8 border-blue-300">
+
+    <div class="h-4/6">
+      <details open class="rounded-tl-xl p-2 border-4 border-r-0 border-blue-300 transition-transform duration-1000">
+        <summary class="font-bold font-mono text-xl cursor-pointer">Map</summary>
+        <label class="block mb-4">
+          <span class="block font-mono font-bold text-slate-600">Map Size Horizontal</span>
+          <input type="number" [(ngModel)]="canvasX" min="10" class="border-2 border-slate-600 rounded">
+        </label>
+        <label class="block">
+          <span class="block font-mono font-bold text-slate-600">Map Size Vertical</span>
+          <input type="number" [(ngModel)]="canvasY" min="10" class="border-2 border-slate-600 rounded">
+        </label>
+      </details>
+
+      <details open class="rounded-bl-xl p-2 border-4 border-t-0 border-r-0 border-blue-300">
+        <summary class="font-bold font-mono text-xl cursor-pointer">Tiles</summary>
+        <label class="block mb-4">
+          <span class="block font-mono font-bold text-slate-600">Map Size Horizontal</span>
+          <input type="number" [(ngModel)]="canvasX" min="10" class="border-2 border-slate-600 rounded">
+        </label>
+        <label class="block">
+          <span class="block font-mono text-sm font-medium text-slate-600">Map Size Vertical</span>
+          <input type="number" [(ngModel)]="canvasY" min="10" class="border-2 border-slate-600 rounded">
+        </label>
+      </details>
+    </div>
+
+    <canvas #canvas [width]="canvasX" [height]="canvasY"
+      class="bg-white border-2 border-dashed border-black h-2/6"></canvas>
   </div>
 </div>
