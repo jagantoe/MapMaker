@@ -4,5 +4,13 @@
 @tailwind utilities;
 
 .selected {
-    @apply border-2 border-blue-400 #{!important};
+    @apply ring-2 ring-offset-2 ring-blue-500 border-none #{!important};
+}
+
+.assigned {
+    @apply bg-origin-padding border-hidden;
+}
+
+.dts-range-start {
+    @apply border-2 border-blue-600 #{!important};
 }

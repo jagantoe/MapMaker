@@ -1,91 +1,336 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, ViewChild } from '@angular/core';
+import { SelectContainerComponent } from 'ngx-drag-to-select';
+import { firstValueFrom, map, Observable, ReplaySubject, switchMap, tap, timer } from 'rxjs';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent {
   title = 'MapMaker';
 
+  constructor() {
+    this.initCheck();
+  }
+  initCheck() {
+    let maps = this.getMaps();
+    if (maps.length == 0) this.currentMapSubject.next(this.createMap("base"));
+    else this.loadMap(maps[0].id);
+    this.change();
+  }
+
+  // Selection & Assignment
+  selectedTiles: Tile[] = [];
+  @ViewChild(SelectContainerComponent) selectContainer!: SelectContainerComponent;
+  public assignTile(tile: TileOption) {
+    this.selectedTiles.forEach(x => x.tile = tile);
+    this.selectContainer.clearSelection();
+  }
+  public selectAll() {
+    this.selectContainer.selectAll();
+  }
+  public clearAll() {
+    this.selectContainer.clearSelection();
+  }
+  public clearAssignment() {
+    this.selectedTiles.forEach(x => x.tile = null);
+    this.selectContainer.clearSelection();
+  }
+
+  // Move
   visibleMapSize = 10;
   visibleMapX = 0;
   visibleMapY = 0;
-
-  tiles: Tile[] = [];
-  visibleTiles: Tile[] = [];
-
-
-  totalMapSizeX = 100;
-  totalMapSizeY = 100;
-
-  constructor() {
-    for (let y = 0; y < this.totalMapSizeY; y++) {
-      for (let x = 0; x < this.totalMapSizeX; x++) {
-        this.tiles.push({ x: x, y: y, type: 1 })
-      }
-    }
-    this.filterTiles();
-  }
-
-  filterTiles() {
-    this.visibleTiles = this.tiles.filter(tile => tile.x >= this.visibleMapX && tile.x < this.visibleMapX + this.visibleMapSize && tile.y >= this.visibleMapY && tile.y < this.visibleMapY + this.visibleMapSize);
-  }
-
-
-  selectedTiles = []
-
-  log(x: any) {
-    console.log(x);
-  }
-
   public move(x: number, y: number) {
     this.moveMap(x, y);
-    this.filterTiles();
   }
   public fullMove(x: number, y: number) {
     this.moveMap(x * this.visibleMapSize, y * this.visibleMapSize);
-    this.filterTiles();
   }
   public maxMove(x: number, y: number) {
     this.moveMap(Number.MAX_SAFE_INTEGER * x, y * Number.MAX_SAFE_INTEGER);
-    this.filterTiles();
   }
-  private moveMap(x: number, y: number) {
+  private async moveMap(x: number, y: number) {
     this.visibleMapX += x;
     this.visibleMapY += y;
+    let map = await this.currentMap();
     if (this.visibleMapX < 0) this.visibleMapX = 0;
-    else if (this.visibleMapX + this.visibleMapSize >= this.totalMapSizeX) this.visibleMapX = this.totalMapSizeX - this.visibleMapSize;
+    else if (this.visibleMapX + this.visibleMapSize >= map.info.width) this.visibleMapX = map.info.width - this.visibleMapSize;
     if (this.visibleMapY < 0) this.visibleMapY = 0;
-    else if (this.visibleMapY + this.visibleMapSize >= this.totalMapSizeY) this.visibleMapY = this.totalMapSizeY - this.visibleMapSize;
-    this.drawPositionRect()
+    else if (this.visibleMapY + this.visibleMapSize >= map.info.height) this.visibleMapY = map.info.height - this.visibleMapSize;
+    this.change();
+  }
+
+
+  async changeSize() {
+    let map = await this.currentMap();
+
+    let { value: width } = await Swal.fire({
+      title: 'Enter a new width',
+      input: 'number',
+      inputValue: map.info.width,
+    });
+    if (!width) return;
+    width = +width;
+
+    let { value: height } = await Swal.fire({
+      title: 'Enter a new height',
+      input: 'number',
+      inputValue: map.info.height,
+    });
+    if (!height) return;
+    height = +height;
+
+    // Same as current
+    if (width == map.info.width && height == map.info.height) return;
+    // Small than visible map size
+    else if (width < this.visibleMapSize || height < this.visibleMapSize) {
+      Swal.fire(`Values cannot be lower than ${this.visibleMapSize}`);
+      return;
+    }
+    // Smaller than current confirmation
+    else if (width < map.info.width || height < map.info.height) {
+      let { value: confirm } = await Swal.fire({
+        title: 'Change map size',
+        input: 'checkbox',
+        inputValue: 0,
+        inputPlaceholder:
+          '<pre>The given size is lower than the current size.\nThis will delete any tiles that exceed the size.\nAre you certain you wish to continue?</pre>',
+        confirmButtonText:
+          'Confirm'
+      })
+      if (confirm == false) return;
+    }
+    // Scale map
+    this.scaleMapSize(map, width, height);
   }
 
   @ViewChild('canvas', { static: true })
   canvas!: ElementRef<HTMLCanvasElement>;
-
   private ctx!: CanvasRenderingContext2D;
-  ngOnInit(): void {
+  ngAfterViewInit() {
     this.ctx = this.canvas.nativeElement.getContext('2d')!;
   }
-  drawPositionRect() {
-    this.ctx.clearRect(0, 0, 100, 100)
-    this.ctx.fillRect(this.visibleMapX, this.visibleMapY, 10, 10);
+
+  tileOptions: TileOption[] = [
+    { value: 0, name: "Floor", color: "#ff0101" },
+    { value: 1, name: "Wall", color: "#8c8c8c" },
+    { value: 2, name: "Spikes", color: "#dcdcaa" },
+    { value: 3, name: "Broken Wall", color: "#351231" },
+    { value: 0, name: "Floor", color: "#ff0101" },
+    { value: 1, name: "Wall", color: "#8c8c8c" },
+    { value: 2, name: "Spikes", color: "#dcdcaa" },
+    { value: 3, name: "Broken Wall", color: "#351231" }
+  ];
+
+
+  public async resetMap() {
+    const { value: accept } = await Swal.fire({
+      title: 'Reset map',
+      input: 'checkbox',
+      inputValue: 0,
+      inputPlaceholder:
+        'I am certain that I want to reset all the tiles.',
+      confirmButtonText:
+        'Confirm'
+    })
+
+    if (accept) {
+      Swal.fire('Map was reset!', "", "success");
+      let map = await this.currentMap();
+      map.tiles.forEach(x => x.tile = null);
+    }
+    else {
+      Swal.fire('Map was not reset!', "", "error");
+    }
   }
 
-  canvasX = 100;
-  canvasY = 100;
-  changeCanvasSize() {
-    this.canvasX = 300;
-    this.canvasY = 300;
+  public async createNewMap() {
+    let { value: name } = await Swal.fire({
+      title: 'Enter a name',
+      input: 'text',
+      showCancelButton: true,
+    });
+
+    if (name) {
+      let map = this.createMap(name);
+      this.saveMap(map);
+    }
   }
+  private createMap(name: string): Map {
+    return {
+      info: {
+        name: name,
+        id: Date.now().toString(),
+        width: 10,
+        height: 10,
+      },
+      options: [],
+      tiles: this.generateMap(10, 10)
+    };
+  }
+  private generateMap(width: number, height: number): Tile[] {
+    let tiles = [];
+    for (let y = 0; y < width; y++) {
+      for (let x = 0; x < height; x++) {
+        tiles.push({ x: x, y: y, type: 1, tile: null });
+      }
+    }
+    return tiles;
+  }
+  private generateAndCopyMap(width: number, height: number, original: Tile[]): Tile[] {
+    let tiles = [];
+    for (let y = 0; y < width; y++) {
+      for (let x = 0; x < height; x++) {
+        let tile = original.find(tile => tile.x == x && tile.y == y);
+        if (tile) tiles.push(tile);
+        else tiles.push({ x: x, y: y, type: 1, tile: null });
+      }
+    }
+    return tiles;
+  }
+  private scaleMapSize(map: Map, width: number, height: number) {
+    map.info.width = width;
+    map.info.height = height;
+    map.tiles = this.generateAndCopyMap(width, height, map.tiles);
+    this.change();
+  }
+
+
+  public async loadSavedMap() {
+    var maps = this.getMaps();
+    if (maps.length == 0) {
+      Swal.fire("There are no saved maps");
+      return;
+    }
+    var options: any = {};
+    maps.forEach(m => options[m.name] = m.name);
+
+    const { value: map } = await Swal.fire({
+      title: 'Load map',
+      input: 'select',
+      inputOptions: options,
+      inputPlaceholder: 'Select a map',
+      showCancelButton: true,
+      inputValidator: (value) => {
+        return new Promise((resolve) => {
+          if (value === "") {
+            resolve('Please select a map to load')
+          }
+          else {
+            resolve(null);
+          }
+        })
+      }
+    });
+
+    if (map) {
+      this.loadMap(map);
+      Swal.fire(`${map} loaded`);
+    }
+  }
+
+  currentMapSubject = new ReplaySubject<Map>(1);
+  currentMap$: Observable<Map> = this.currentMapSubject.asObservable();
+
+  async currentMap(): Promise<Map> {
+    return firstValueFrom(this.currentMap$);
+  }
+
+  changeSubject = new ReplaySubject<null>(1);
+  change$ = this.changeSubject.asObservable();
+
+  filteredTiles$: Observable<Tile[]> = this.change$.pipe(
+    switchMap(x => this.currentMap$),
+    tap(x => this.updateCanvas(x)),
+    map(x => this.filterTiles(x)),
+  );
+  private SAVE_DELAY = 10000;
+  saveTimer$ = timer(this.SAVE_DELAY, this.SAVE_DELAY).pipe(
+    tap(x => this.save())
+  );
+
+  private updateCanvas(map: Map) {
+    if (this.ctx == null) this.ctx = this.canvas.nativeElement.getContext('2d')!;
+    this.ctx.clearRect(0, 0, map.info.width, map.info.height)
+    this.ctx.fillRect(this.visibleMapX, this.visibleMapY, 10, 10);
+  }
+  filterTiles(map: Map): Tile[] {
+    return map.tiles.filter(tile => tile.x >= this.visibleMapX && tile.x < this.visibleMapX + this.visibleMapSize && tile.y >= this.visibleMapY && tile.y < this.visibleMapY + this.visibleMapSize);
+  }
+  private change() {
+    this.changeSubject.next(null);
+  }
+  private async save() {
+    console.log("saving");
+    let map = await this.currentMap();
+    this.saveMap(map);
+  }
+
+
+  // Storage
+  private MAPS_STORAGE = "MAPS";
+  private getMaps(): MapInfo[] {
+    return JSON.parse(localStorage.getItem(this.MAPS_STORAGE)!) ?? [];
+  }
+  private loadMap(id: string) {
+    let map = JSON.parse(localStorage.getItem(id)!);
+    this.currentMapSubject.next(map);
+  }
+  private saveMap(map: Map) {
+    this.saveMapInfo(map.info);
+    localStorage.setItem(map.info.id, JSON.stringify(map));
+  }
+  private saveMapInfo(mapInfo: MapInfo) {
+    let maps = this.getMaps();
+    maps = maps.filter(x => x.id != mapInfo.id);
+    maps.push(mapInfo);
+    localStorage.setItem(this.MAPS_STORAGE, JSON.stringify(maps));
+  }
+
+  // Export
+  public async exportCurrentMap() {
+    Swal.fire(
+      'Map exported!',
+      'A download should start with the exported map!',
+      'success'
+    );
+    let map = await this.currentMap();
+    this.exportMap(map.info.name, map.tiles);
+  }
+  private exportMap(name: string, object: any | any[]) {
+    let json = JSON.stringify(object);
+    let element = document.createElement('a');
+    element.setAttribute('href', "data:text/json;charset=UTF-8," + encodeURIComponent(json));
+    element.setAttribute('download', `${name}.json`);
+    element.click();
+  }
+}
+
+interface Map {
+  info: MapInfo;
+  options: TileOptionGroup[];
+  tiles: Tile[];
+}
+interface MapInfo {
+  name: string;
+  id: string;
+  width: number;
+  height: number;
 }
 interface Tile {
   x: number;
   y: number;
   type: number;
+  tile: TileOption | null;
 }
-
+interface TileOptionGroup {
+  name: string;
+  options: TileOption[];
+}
 interface TileOption {
   value: any;
   name: string
