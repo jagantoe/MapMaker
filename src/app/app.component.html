@@ -1,6 +1,6 @@
 <div class="grid grid-cols-5 h-screen">
-  <div class="col-span-4 grid grid-cols-6 grid-rows-6">
-    <div class="row-start-1 col-start-2 col-span-4 grid place-content-center select-none">
+  <div class="col-span-4 grid grid-cols-8 grid-rows-8">
+    <div class="row-start-1 col-start-2 col-span-6 grid place-content-center select-none">
       <div class="flex gap-3">
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10 mb-3"
           (click)="fullMove(0,-1)">⇈</button>
@@ -10,7 +10,7 @@
           (click)="maxMove(0,-1)">⭱</button>
       </div>
     </div>
-    <div class="row-start-6 col-start-2 col-span-4 grid place-content-center select-none">
+    <div class="row-start-8 col-start-2 col-span-6 grid place-content-center select-none">
       <div class="flex gap-3">
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10"
           (click)="fullMove(0,1)">⇊</button>
@@ -20,7 +20,7 @@
           (click)="maxMove(0,1)">⭳</button>
       </div>
     </div>
-    <div class="row-start-2 col-start-1 row-span-4 grid place-content-center select-none">
+    <div class="row-start-2 col-start-1 row-span-6 grid place-content-center select-none">
       <div class="flex flex-col gap-3">
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-10 shadow-lg h-20 mr-3"
           (click)="fullMove(-1,0)">⇇</button>
@@ -30,7 +30,7 @@
           (click)="maxMove(-1,0)">⭰</button>
       </div>
     </div>
-    <div class="row-start-2 col-start-6 row-span-4 grid place-content-center select-none">
+    <div class="row-start-2 col-start-8 row-span-6 grid place-content-center select-none">
       <div class="flex flex-col gap-3">
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-10 shadow-lg h-20"
           (click)="fullMove(1,0)">⇉</button>
@@ -40,23 +40,23 @@
           (click)="maxMove(1,0)">⭲</button>
       </div>
     </div>
-    <div class="row-start-1 col-start-6 grid place-content-center select-none">
+    <div class="row-start-1 col-start-8 grid place-content-center select-none">
       <div class="flex flex-wrap gap-3">
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="selectAll()">ALL</button>
+          (click)="selectAll()">All</button>
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="clearAll()">CLEAR</button>
-        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="clearAssignment()">REMOVE</button>
+          (click)="clearAll()">None</button>
       </div>
     </div>
-    <div class="row-start-6 col-start-6 grid place-content-center select-none">
+    <div class="row-start-8 col-start-8 grid place-content-center select-none">
       <div class="flex flex-wrap gap-3">
+        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
+          (click)="clearAssignment()">Clear</button>
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
           (click)="exportCurrentMap()">Export</button>
       </div>
     </div>
-    <dts-select-container class="row-start-2 col-start-2 row-span-4 col-span-4 !grid gap-3 grid-cols-10 "
+    <dts-select-container class="row-start-2 col-start-2 row-span-6 col-span-6 !grid gap-3 grid-cols-10 "
       [(selectedItems)]="selectedTiles">
       <div *ngFor="let tile of (filteredTiles$ | async)" [dtsSelectItem]="tile"
         [ngStyle]="{'background-color': tile.tile != null? tile.tile.color + '80' : null}"
