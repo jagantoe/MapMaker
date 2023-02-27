@@ -42,32 +42,32 @@
     </div>
     <div class="row-start-1 col-start-8 grid place-content-center select-none">
       <div class="flex flex-wrap gap-3">
-        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
+        <!-- <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
           (click)="selectAll()">All</button>
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="clearAll()">None</button>
+          (click)="clearAll()">None</button> -->
       </div>
     </div>
     <div class="row-start-8 col-start-8 grid place-content-center select-none">
       <div class="flex flex-wrap gap-3">
-        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
+        <!-- <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
           (click)="clearAssignment()">Clear</button>
         <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="exportCurrentMap()">Export</button>
+          (click)="exportCurrentMap()">Export</button> -->
       </div>
     </div>
     <dts-select-container class="row-start-2 col-start-2 row-span-6 col-span-6 !grid gap-3 grid-cols-10 "
       [(selectedItems)]="selectedTiles">
       <div *ngFor="let tile of (filteredTiles$ | async)" [dtsSelectItem]="tile"
-        [ngStyle]="{'background-color': tile.tile != null? tile.tile.color + '80' : null}"
-        [ngClass]="{'assigned':tile.tile != null}" class="rounded border-2 border-dashed grid place-content-center p-3">
-        <span class="select-none font-mono">{{tile.x | number: '2.0'}},{{tile.y | number: '2.0'}}</span>
+        [ngStyle]="{'background-color': tile.option != null? tile.option.color + '80' : null}"
+        [ngClass]="{'assigned':tile.option != null}"
+        class="rounded border-2 border-dashed grid place-content-center p-3">
+        <span class="select-none font-mono">{{tile.tile.x | number: '2.0'}},{{tile.tile.y | number: '2.0'}}</span>
       </div>
     </dts-select-container>
   </div>
-  <div class="col-span-1 flex flex-col bg-gray-200 rounded-tl-xl border-l-8 border-t-8 border-blue-300 select-none">
-
-    <div class="h-4/6 m-2 mr-0" *ngIf="(currentMap$ | async) as map">
+  <div class="col-span-1 grid grid-rows-6 bg-gray-200 rounded-tl-xl border-l-8 border-t-8 border-blue-300 select-none">
+    <div class="row-span-4 p-2 pr-0 flex flex-col" *ngIf="(currentMap$ | async) as map">
       <details open class="rounded-tl-xl p-2 border-4 border-r-0 border-blue-300">
         <summary class="font-bold font-mono text-xl cursor-pointer">Maps</summary>
         <div class="flex gap-3 justify-around mt-2">
@@ -77,9 +77,8 @@
             (click)="loadSavedMap()">LOAD</button>
         </div>
       </details>
-
       <details open class="p-2 border-l-4 border-blue-300">
-        <summary class="font-bold font-mono text-xl cursor-pointer">Current: {{currentMap.name}}</summary>
+        <summary class="font-bold font-mono text-xl cursor-pointer">Current: {{map.info.name}}</summary>
         <div class="grid grid-cols-2">
           <label class="block col-start-1 p-2">
             <span class="block font-mono font-bold text-slate-600">Size Horizontal: {{map.info.width}}</span>
@@ -88,27 +87,43 @@
             <span class="block font-mono font-bold text-slate-600">Size Vertical: {{map.info.height}}</span>
           </label>
         </div>
-
-        <div class="flex gap-3 mt-2">
+        <div class="flex gap-3 mt-2 justify-between">
           <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 p-2 shadow-lg h-10"
             (click)="changeSize()">CHANGE SIZE</button>
           <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 p-2 shadow-lg h-10"
             (click)="resetMap()">RESET MAP</button>
         </div>
       </details>
-
-      <details open class="rounded-bl-xl p-2 border-4 border-r-0 border-blue-300">
-        <summary class="font-bold font-mono text-xl cursor-pointer">Tiles</summary>
-
-        <div class="flex gap-3 flex-wrap justify-around">
-          <button *ngFor="let tile of tileOptions"
-            class="rounded-full p-2 h-10 w-1/5 text-ellipsis text-white font-bold overflow-hidden"
-            (click)="assignTile(tile)" [ngStyle]="{'background': tile.color}">{{tile.name}}</button>
-        </div>
-      </details>
+      <div class="grow">
+        <details open class="h-full w-full rounded-bl-xl p-2 border-4 border-r-0 border-blue-300">
+          <summary class="font-bold font-mono text-xl cursor-pointer">Tiles</summary>
+          <div class="h-[95%] overflow-auto flex flex-col gap-3">
+            <div class="flex justify-between">
+              <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10 row-span-1"
+                (click)="addOption()">NEW</button>
+              <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-10 row-span-1"
+                (click)="toggleEdit()">EDIT</button>
+            </div>
+            <div class="grow relative overflow-auto">
+              <div class="absolute overflow-auto p-1">
+                <div class="grid grid-cols-6 rounded pl-2 hover:bg-gradient-to-r hover:from-blue-300 hover:to-gray-200"
+                  *ngFor="let option of map.options" (click)="assignTile(option)">
+                  <input [disabled]="editMode" [value]="option.color" type="color" class="col-span-1 w-full">
+                  <input [disabled]="editMode" [value]="option.name" type="text" class="col-start-2 col-span-3">
+                  <input [disabled]="editMode" [value]="option.value" type="number" class="col-start-5 col-span-1">
+                  <button [disabled]="editMode" class="rounded-r bg-red-300 enabled:hover:bg-red-500 duration-300"
+                    (click)="removeOption(option)">X</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
     </div>
-
-    <canvas #canvas [width]="10" [height]="10" class="bg-white border-2 border-dashed border-black h-2/6 m-2"></canvas>
+    <div class="row-start-5 row-span-2 p-2 flex justify-center">
+      <canvas #canvas class="h-full w-full bg-white border-2 border-dashed border-black"
+        (click)="moveTest($event)"></canvas>
+    </div>
   </div>
 </div>
 <ng-container *ngIf="saveTimer$ | async"></ng-container>

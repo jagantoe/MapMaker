@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { SelectContainerComponent } from 'ngx-drag-to-select';
 import { firstValueFrom, map, Observable, ReplaySubject, switchMap, tap, timer } from 'rxjs';
 import Swal from 'sweetalert2';
@@ -15,19 +15,34 @@ export class AppComponent {
   constructor() {
     this.initCheck();
   }
-  initCheck() {
+  private initCheck() {
     let maps = this.getMaps();
     if (maps.length == 0) this.currentMapSubject.next(this.createMap("base"));
     else this.loadMap(maps[0].id);
     this.change();
   }
 
+  // Utils
+  private getId(): string {
+    return Date.now().toString();
+  }
+  private getRandomColor() {
+    var letters = "0123456789ABCDEF";
+    var color = "#";
+    for (var i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+
   // Selection & Assignment
-  selectedTiles: Tile[] = [];
+  selectedTiles: TileWrapper[] = [];
   @ViewChild(SelectContainerComponent) selectContainer!: SelectContainerComponent;
-  public assignTile(tile: TileOption) {
-    this.selectedTiles.forEach(x => x.tile = tile);
+  public assignTile(option: TileOption) {
+    if (this.editMode == false) return;
+    this.selectedTiles.forEach(x => x.tile.tile = option.id);
     this.selectContainer.clearSelection();
+    this.change();
   }
   public selectAll() {
     this.selectContainer.selectAll();
@@ -36,11 +51,12 @@ export class AppComponent {
     this.selectContainer.clearSelection();
   }
   public clearAssignment() {
-    this.selectedTiles.forEach(x => x.tile = null);
+    this.selectedTiles.forEach(x => x.tile.tile = null);
     this.selectContainer.clearSelection();
   }
 
   // Move
+  maxMapSize = 300;
   visibleMapSize = 10;
   visibleMapX = 0;
   visibleMapY = 0;
@@ -54,8 +70,11 @@ export class AppComponent {
     this.moveMap(Number.MAX_SAFE_INTEGER * x, y * Number.MAX_SAFE_INTEGER);
   }
   private async moveMap(x: number, y: number) {
-    this.visibleMapX += x;
-    this.visibleMapY += y;
+    this.MoveMapTo(this.visibleMapX + x, this.visibleMapY + y)
+  }
+  private async MoveMapTo(x: number, y: number) {
+    this.visibleMapX = x;
+    this.visibleMapY = y;
     let map = await this.currentMap();
     if (this.visibleMapX < 0) this.visibleMapX = 0;
     else if (this.visibleMapX + this.visibleMapSize >= map.info.width) this.visibleMapX = map.info.width - this.visibleMapSize;
@@ -91,6 +110,10 @@ export class AppComponent {
       Swal.fire(`Values cannot be lower than ${this.visibleMapSize}`);
       return;
     }
+    else if (width > this.maxMapSize || height > this.maxMapSize) {
+      Swal.fire(`Values cannot be higher than ${this.maxMapSize} due to browser string size limit`);
+      return;
+    }
     // Smaller than current confirmation
     else if (width < map.info.width || height < map.info.height) {
       let { value: confirm } = await Swal.fire({
@@ -115,18 +138,6 @@ export class AppComponent {
     this.ctx = this.canvas.nativeElement.getContext('2d')!;
   }
 
-  tileOptions: TileOption[] = [
-    { value: 0, name: "Floor", color: "#ff0101" },
-    { value: 1, name: "Wall", color: "#8c8c8c" },
-    { value: 2, name: "Spikes", color: "#dcdcaa" },
-    { value: 3, name: "Broken Wall", color: "#351231" },
-    { value: 0, name: "Floor", color: "#ff0101" },
-    { value: 1, name: "Wall", color: "#8c8c8c" },
-    { value: 2, name: "Spikes", color: "#dcdcaa" },
-    { value: 3, name: "Broken Wall", color: "#351231" }
-  ];
-
-
   public async resetMap() {
     const { value: accept } = await Swal.fire({
       title: 'Reset map',
@@ -136,12 +147,13 @@ export class AppComponent {
         'I am certain that I want to reset all the tiles.',
       confirmButtonText:
         'Confirm'
-    })
+    });
 
     if (accept) {
       Swal.fire('Map was reset!', "", "success");
       let map = await this.currentMap();
       map.tiles.forEach(x => x.tile = null);
+      this.change();
     }
     else {
       Swal.fire('Map was not reset!', "", "error");
@@ -164,30 +176,30 @@ export class AppComponent {
     return {
       info: {
         name: name,
-        id: Date.now().toString(),
+        id: this.getId(),
         width: 10,
         height: 10,
       },
-      options: [],
+      options: [this.createOption()],
       tiles: this.generateMap(10, 10)
     };
   }
   private generateMap(width: number, height: number): Tile[] {
-    let tiles = [];
+    let tiles: Tile[] = [];
     for (let y = 0; y < width; y++) {
       for (let x = 0; x < height; x++) {
-        tiles.push({ x: x, y: y, type: 1, tile: null });
+        tiles.push({ x: x, y: y, tile: null });
       }
     }
     return tiles;
   }
   private generateAndCopyMap(width: number, height: number, original: Tile[]): Tile[] {
-    let tiles = [];
+    let tiles: Tile[] = [];
     for (let y = 0; y < width; y++) {
       for (let x = 0; x < height; x++) {
         let tile = original.find(tile => tile.x == x && tile.y == y);
         if (tile) tiles.push(tile);
-        else tiles.push({ x: x, y: y, type: 1, tile: null });
+        else tiles.push({ x: x, y: y, tile: null });
       }
     }
     return tiles;
@@ -197,6 +209,30 @@ export class AppComponent {
     map.info.height = height;
     map.tiles = this.generateAndCopyMap(width, height, map.tiles);
     this.change();
+  }
+  private createOption(): TileOption {
+    let id = this.getId();
+    return { id: id, value: 0, name: `Tile ${id}`, color: this.getRandomColor() };
+  }
+  public async addOption() {
+    let map = await this.currentMap();
+    map.options.push(this.createOption());
+  }
+  public async removeOption(option: TileOption) {
+    let map = await this.currentMap();
+    let optionUses = map.tiles.filter(tile => tile.tile == option.id);
+    if (optionUses.length > 0) {
+      const { value: accept } = await Swal.fire({
+        title: 'Remove option',
+        input: 'checkbox',
+        inputValue: 0,
+        inputPlaceholder: 'The option is used on the map. I am certain that I want to remove the option.',
+        confirmButtonText: 'Confirm'
+      });
+      if (accept == false) return;
+      optionUses.forEach(tile => tile.tile = null);
+    }
+    map.options = map.options.filter(tile => tile.id != option.id);
   }
 
 
@@ -243,7 +279,7 @@ export class AppComponent {
   changeSubject = new ReplaySubject<null>(1);
   change$ = this.changeSubject.asObservable();
 
-  filteredTiles$: Observable<Tile[]> = this.change$.pipe(
+  filteredTiles$: Observable<TileWrapper[]> = this.change$.pipe(
     switchMap(x => this.currentMap$),
     tap(x => this.updateCanvas(x)),
     map(x => this.filterTiles(x)),
@@ -255,21 +291,42 @@ export class AppComponent {
 
   private updateCanvas(map: Map) {
     if (this.ctx == null) this.ctx = this.canvas.nativeElement.getContext('2d')!;
+    this.canvas.nativeElement.width = map.info.width;
+    this.canvas.nativeElement.height = map.info.height;
     this.ctx.clearRect(0, 0, map.info.width, map.info.height)
-    this.ctx.fillRect(this.visibleMapX, this.visibleMapY, 10, 10);
+    map.tiles.forEach(x => {
+      if (x.tile) {
+        this.ctx.fillStyle = map.options.find(y => y.id == x.tile)?.color!;
+        this.ctx.fillRect(x.x, x.y, 1, 1);
+      }
+    });
   }
-  filterTiles(map: Map): Tile[] {
-    return map.tiles.filter(tile => tile.x >= this.visibleMapX && tile.x < this.visibleMapX + this.visibleMapSize && tile.y >= this.visibleMapY && tile.y < this.visibleMapY + this.visibleMapSize);
+  private filterTiles(map: Map): TileWrapper[] {
+    let filteredTiles = map.tiles.filter(tile => tile.x >= this.visibleMapX && tile.x < this.visibleMapX + this.visibleMapSize && tile.y >= this.visibleMapY && tile.y < this.visibleMapY + this.visibleMapSize);
+    let wrappedTiles = filteredTiles.map(tile => ({ tile, option: map.options.find(o => o.id == tile.tile) }) as TileWrapper);
+    return wrappedTiles;
   }
   private change() {
     this.changeSubject.next(null);
   }
   private async save() {
-    console.log("saving");
     let map = await this.currentMap();
     this.saveMap(map);
   }
+  moveTest(event: any) {
+    // Pixel cords of mouse click (offsetted within the canvas) / the canvas size in pixels * the size of the canvas (=map size)
+    let y = Math.floor(event.offsetY / this.canvas.nativeElement.clientHeight * this.canvas.nativeElement.height);
+    let x = Math.floor(event.offsetX / this.canvas.nativeElement.clientWidth * this.canvas.nativeElement.width);
+    // Offset it by half visible map size because it uses top left corner
+    x -= this.visibleMapSize / 2;
+    y -= this.visibleMapSize / 2;
+    this.MoveMapTo(x, y)
+  }
 
+  editMode = true;
+  public toggleEdit() {
+    this.editMode = !this.editMode;
+  }
 
   // Storage
   private MAPS_STORAGE = "MAPS";
@@ -292,6 +349,11 @@ export class AppComponent {
   }
 
   // Export
+  private getValueMapper(options: TileOption[]): any {
+    let map: any = {};
+    options.forEach(x => map[x.id] = x.value);
+    return map;
+  }
   public async exportCurrentMap() {
     Swal.fire(
       'Map exported!',
@@ -299,7 +361,9 @@ export class AppComponent {
       'success'
     );
     let map = await this.currentMap();
-    this.exportMap(map.info.name, map.tiles);
+    let mapper = this.getValueMapper(map.options);
+    let tiles = map.tiles.map(x => ({ x: x.x, y: x.y, value: mapper[x.tile!] ?? 0 }))
+    this.exportMap(map.info.name, tiles);
   }
   private exportMap(name: string, object: any | any[]) {
     let json = JSON.stringify(object);
@@ -308,31 +372,52 @@ export class AppComponent {
     element.setAttribute('download', `${name}.json`);
     element.click();
   }
+
+  // Keybinds
+  @HostListener('document:keydown', ['$event'])
+  keyBinds(btn: any) {
+    switch (btn.code) {
+      case "ArrowUp":
+        this.move(0, -1);
+        break;
+      case "ArrowDown":
+        this.move(0, 1);
+        break;
+      case "ArrowRight":
+        this.move(1, 0);
+        break;
+      case "ArrowLeft":
+        this.move(-1, 0);
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 interface Map {
   info: MapInfo;
-  options: TileOptionGroup[];
+  options: TileOption[];
   tiles: Tile[];
 }
 interface MapInfo {
-  name: string;
   id: string;
+  name: string;
   width: number;
   height: number;
 }
 interface Tile {
   x: number;
   y: number;
-  type: number;
-  tile: TileOption | null;
-}
-interface TileOptionGroup {
-  name: string;
-  options: TileOption[];
+  tile: string | null;
 }
 interface TileOption {
-  value: any;
+  id: string;
   name: string
+  value: any;
   color: string;
+}
+interface TileWrapper {
+  tile: Tile;
+  option: TileOption;
 }
