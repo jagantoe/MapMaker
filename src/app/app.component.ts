@@ -34,6 +34,11 @@ export class AppComponent {
     }
     return color;
   }
+  private getValueMapper(options: TileOption[]): any {
+    let map: any = {};
+    options.forEach(x => map[x.id] = x.value);
+    return map;
+  }
 
   // Selection & Assignment
   selectedTiles: TileWrapper[] = [];
@@ -53,6 +58,7 @@ export class AppComponent {
   public clearAssignment() {
     this.selectedTiles.forEach(x => x.tile.tile = null);
     this.selectContainer.clearSelection();
+    this.change();
   }
 
   // Move
@@ -233,6 +239,7 @@ export class AppComponent {
       optionUses.forEach(tile => tile.tile = null);
     }
     map.options = map.options.filter(tile => tile.id != option.id);
+    this.change();
   }
 
 
@@ -349,11 +356,6 @@ export class AppComponent {
   }
 
   // Export
-  private getValueMapper(options: TileOption[]): any {
-    let map: any = {};
-    options.forEach(x => map[x.id] = x.value);
-    return map;
-  }
   public async exportCurrentMap() {
     Swal.fire(
       'Map exported!',
@@ -378,20 +380,29 @@ export class AppComponent {
   keyBinds(btn: any) {
     switch (btn.code) {
       case "ArrowUp":
-        this.move(0, -1);
+        this.keyBindMoveMethod(0, -1);
         break;
       case "ArrowDown":
-        this.move(0, 1);
+        this.keyBindMoveMethod(0, 1);
         break;
       case "ArrowRight":
-        this.move(1, 0);
+        this.keyBindMoveMethod(1, 0);
         break;
       case "ArrowLeft":
-        this.move(-1, 0);
+        this.keyBindMoveMethod(-1, 0);
         break;
       default:
         break;
     }
+  }
+
+  // Settings
+  keepSelectedOnAssign = false;
+  keyBindMoveMethod = this.move;
+  public openSettings() {
+    this.keepSelectedOnAssign = false;
+    if (true) this.keyBindMoveMethod = this.move;
+    else this.keyBindMoveMethod = this.fullMove;
   }
 }
 

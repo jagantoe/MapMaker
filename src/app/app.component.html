@@ -40,29 +40,31 @@
           (click)="maxMove(1,0)">⭲</button>
       </div>
     </div>
-    <div class="row-start-1 col-start-8 grid place-content-center select-none">
-      <div class="flex flex-wrap gap-3">
-        <!-- <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="selectAll()">All</button>
-        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="clearAll()">None</button> -->
-      </div>
+    <div class="row-start-1 col-start-1 grid grid-rows-2 grid-cols-2 select-none gap-3 p-3">
+      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 shadow-lg"
+        (click)="selectAll()">All</button>
+      <button class="col-start-2 rounded-full bg-blue-300 hover:bg-blue-500 duration-300 shadow-lg"
+        (click)="clearAll()">None</button>
     </div>
-    <div class="row-start-8 col-start-8 grid place-content-center select-none">
-      <div class="flex flex-wrap gap-3">
-        <!-- <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="clearAssignment()">Clear</button>
-        <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 w-20 shadow-lg h-20"
-          (click)="exportCurrentMap()">Export</button> -->
-      </div>
+    <div class="row-start-1 col-start-8 grid grid-rows-2 grid-cols-2 select-none gap-3 p-3">
+      <button class="col-start-2 rounded-full bg-blue-300 hover:bg-blue-500 duration-300 shadow-lg"
+        (click)="openSettings()">Settings</button>
     </div>
-    <dts-select-container class="row-start-2 col-start-2 row-span-6 col-span-6 !grid gap-3 grid-cols-10 "
+    <div class="row-start-8 col-start-8 grid grid-rows-2 grid-cols-2 select-none gap-3 p-3">
+      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 shadow-lg"
+        (click)="clearAssignment()">Clear</button>
+      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 shadow-lg"
+        (click)="exportCurrentMap()">Export</button>
+    </div>
+    <dts-select-container class="row-start-2 col-start-2 row-span-6 col-span-6 !grid gap-3 grid-cols-10"
       [(selectedItems)]="selectedTiles">
       <div *ngFor="let tile of (filteredTiles$ | async)" [dtsSelectItem]="tile"
         [ngStyle]="{'background-color': tile.option != null? tile.option.color + '80' : null}"
         [ngClass]="{'assigned':tile.option != null}"
-        class="rounded border-2 border-dashed grid place-content-center p-3">
-        <span class="select-none font-mono">{{tile.tile.x | number: '2.0'}},{{tile.tile.y | number: '2.0'}}</span>
+        class="rounded border-2 border-dashed grid place-content-center p-3"
+        [attr.title]="tile.option == null? null :tile.option.name">
+        <span class="select-none font-mono">{{tile.tile.x | number: '2.0'}},{{tile.tile.y | number:
+          '2.0'}}</span>
       </div>
     </dts-select-container>
   </div>
@@ -108,11 +110,11 @@
               <div class="absolute overflow-auto p-1">
                 <div class="grid grid-cols-6 rounded pl-2 hover:bg-gradient-to-r hover:from-blue-300 hover:to-gray-200"
                   *ngFor="let option of map.options" (click)="assignTile(option)">
-                  <input [disabled]="editMode" [value]="option.color" type="color" class="col-span-1 w-full">
-                  <input [disabled]="editMode" [value]="option.name" type="text" class="col-start-2 col-span-3">
-                  <input [disabled]="editMode" [value]="option.value" type="number" class="col-start-5 col-span-1">
+                  <input [disabled]="editMode" [(ngModel)]="option.color" type="color" class="col-span-1 w-full">
+                  <input [disabled]="editMode" [(ngModel)]="option.name" type="text" class="col-start-2 col-span-3">
+                  <input [disabled]="editMode" [(ngModel)]="option.value" type="number" class="col-start-5 col-span-1">
                   <button [disabled]="editMode" class="rounded-r bg-red-300 enabled:hover:bg-red-500 duration-300"
-                    (click)="removeOption(option)">X</button>
+                    (click)="removeOption(option)">╳</button>
                 </div>
               </div>
             </div>
@@ -121,7 +123,7 @@
       </div>
     </div>
     <div class="row-start-5 row-span-2 p-2 flex justify-center">
-      <canvas #canvas class="h-full w-full bg-white border-2 border-dashed border-black"
+      <canvas #canvas class="max-w-full bg-white border-2 border-dashed border-black"
         (click)="moveTest($event)"></canvas>
     </div>
   </div>
