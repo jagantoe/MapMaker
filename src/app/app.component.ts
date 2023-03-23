@@ -271,7 +271,8 @@ export class AppComponent {
     });
 
     if (map) {
-      this.loadMap(map);
+      let id = maps.find(x => x.name == map)!.id;
+      this.loadMap(id);
       Swal.fire(`${map} loaded`);
     }
   }
