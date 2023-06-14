@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { SelectContainerComponent } from 'ngx-drag-to-select';
-import { firstValueFrom, map, Observable, ReplaySubject, switchMap, tap, timer } from 'rxjs';
+import { Observable, ReplaySubject, firstValueFrom, map, switchMap, tap, timer } from 'rxjs';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -24,7 +24,7 @@ export class AppComponent {
 
   // Utils
   private getId(): string {
-    return Date.now().toString();
+    return crypto.randomUUID();
   }
   private getRandomColor() {
     var letters = "0123456789ABCDEF";
@@ -44,6 +44,7 @@ export class AppComponent {
   selectedTiles: TileWrapper[] = [];
   @ViewChild(SelectContainerComponent) selectContainer!: SelectContainerComponent;
   public assignTile(option: TileOption) {
+    console.log("here");
     if (this.editMode == false) return;
     this.selectedTiles.forEach(x => x.tile.tile = option.id);
     this.selectContainer.clearSelection();
@@ -52,7 +53,7 @@ export class AppComponent {
   public selectAll() {
     this.selectContainer.selectAll();
   }
-  public clearAll() {
+  public clearSelection() {
     this.selectContainer.clearSelection();
   }
   public clearAssignment() {
@@ -220,9 +221,49 @@ export class AppComponent {
     let id = this.getId();
     return { id: id, value: 0, name: `Tile ${id}`, color: this.getRandomColor() };
   }
+  private createOptions(values: any): TileOption[] {
+    return Object.keys(values).map(key => ({ id: this.getId(), value: values[key], name: key, color: this.getRandomColor() }));
+  }
   public async addOption() {
     let map = await this.currentMap();
     map.options.push(this.createOption());
+  }
+  public async importOptions() {
+    let { value: optionsJSON } = await Swal.fire({
+      title: 'Enter the options in JSON format',
+      input: 'text',
+      showCancelButton: true,
+    });
+
+    if (optionsJSON) {
+      let parsedOptions;
+      try {
+        parsedOptions = JSON.parse(optionsJSON);
+      } catch (error) {
+        Swal.fire(
+          'Failed import!',
+          'Invalid JSON format',
+          'warning'
+        );
+      }
+      if (Object.values(parsedOptions).some(x => typeof x != "number")) {
+        Swal.fire(
+          'Failed import!',
+          'Non numeric values are invalid',
+          'warning'
+        );
+      }
+      let map = await this.currentMap();
+      let options = this.createOptions(parsedOptions);
+      options.forEach(opt => {
+        let value = map.options.find(x => x.value == opt.value)
+        if (value) {
+          opt.id = value.id;
+        }
+      });
+      map.options = options;
+      this.change();
+    }
   }
   public async removeOption(option: TileOption) {
     let map = await this.currentMap();
