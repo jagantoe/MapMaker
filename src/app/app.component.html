@@ -55,6 +55,10 @@
         (click)="clearAssignment()">Clear</button>
       <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 shadow-lg"
         (click)="exportCurrentMap()">Export</button>
+      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 shadow-lg" (click)="shiftMapX()">Shift X
+      </button>
+      <button class="rounded-full bg-blue-300 hover:bg-blue-500 duration-300 shadow-lg" (click)="shiftMapY()">Shift
+        Y</button>
     </div>
     <dts-select-container class="row-start-2 col-start-2 row-span-6 col-span-6 !grid gap-3 grid-cols-10"
       [(selectedItems)]="selectedTiles">

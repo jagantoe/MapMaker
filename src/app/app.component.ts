@@ -90,6 +90,71 @@ export class AppComponent {
     this.change();
   }
 
+  async shiftMapX() {
+    let { value: shift } = await Swal.fire({
+      title: 'Shift X by how much?',
+      input: 'number'
+    });
+    shift = +shift;
+    if (typeof (shift) == "number" && shift != 0) {
+      let map = await this.currentMap();
+      if (shift > 0) {
+        for (let x = map.info.width; x >= 0 - shift; x--) {
+          for (let y = 0; y < map.info.height; y++) {
+            let target = map.tiles.find(tile => tile.x == x + shift && tile.y == y);
+            let source = map.tiles.find(tile => tile.x == x && tile.y == y);
+            this.shiftTile(target, source);
+          }
+        }
+      }
+      else {
+        for (let x = 0; x < map.info.width - shift; x++) {
+          for (let y = 0; y < map.info.height; y++) {
+            let target = map.tiles.find(tile => tile.x == x + shift && tile.y == y);
+            let source = map.tiles.find(tile => tile.x == x && tile.y == y);
+            this.shiftTile(target, source);
+          }
+        }
+      }
+      this.change();
+    }
+  }
+
+  async shiftMapY() {
+    let { value: shift } = await Swal.fire({
+      title: 'Shift Y by how much?',
+      input: 'number'
+    });
+    shift = +shift;
+    if (typeof (shift) == "number" && shift != 0) {
+      let map = await this.currentMap();
+      if (shift > 0) {
+        for (let y = map.info.height; y >= 0 - shift; y--) {
+          for (let x = 0; x < map.info.width; x++) {
+            let target = map.tiles.find(tile => tile.x == x && tile.y == y + shift);
+            let source = map.tiles.find(tile => tile.x == x && tile.y == y);
+            this.shiftTile(target, source);
+          }
+        }
+      }
+      else {
+        for (let y = 0; y < map.info.height - shift; y++) {
+          for (let x = 0; x < map.info.width; x++) {
+            let target = map.tiles.find(tile => tile.x == x && tile.y == y + shift);
+            let source = map.tiles.find(tile => tile.x == x && tile.y == y);
+            this.shiftTile(target, source);
+          }
+        }
+      }
+      this.change();
+    }
+  }
+
+  private shiftTile(target: Tile | undefined, source: Tile | undefined) {
+    if (target) {
+      target.tile = source?.tile ?? null;
+    }
+  }
 
   async changeSize() {
     let map = await this.currentMap();
